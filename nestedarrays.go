@@ -8,15 +8,15 @@ import (
 )
 
 func main() {
-	items, err := fetchExpensiveItems("Handbags", "Gucci", "Italy", 200)
+	items, err := fetchExpensiveItems("Italy", 200)
 	if err != nil {
 		fmt.Printf("Failed with error: %v", err)
 	}
 
-	fmt.Printf("Items matching criteria: %v", items)
+	fmt.Printf("Items matching criteria: %+v", items)
 }
 
-func fetchExpensiveItems(catalog string, brand string, origin string, minPrice float64) ([]Item, error) {
+func fetchExpensiveItems(origin string, minPrice float64) ([]Item, error) {
 	session, err := mgo.Dial("mongodb://localhost:27017")
 	if err != nil {
 		return nil, err
@@ -28,13 +28,14 @@ func fetchExpensiveItems(catalog string, brand string, origin string, minPrice f
 	//create the aggregator pipeline that will fetch just the needed data from MongoDB, and nothing more
 	pipe := c.Pipe([]bson.M{
 		{"$match": bson.M{
-			"catalogName": catalog,
 			"brands": bson.M{
 				"$elemMatch": bson.M{
-					"brandName": brand,
+					"items.origin": bson.M{"$eq": origin},
+					"items.price":  bson.M{"$gte": minPrice},
 				},
 			},
 		}},
+		{"$project": bson.M{"_id": 0, "brands": 1}},
 		{"$addFields": bson.M{
 			"brands": bson.M{
 				"$filter": bson.M{
@@ -43,7 +44,6 @@ func fetchExpensiveItems(catalog string, brand string, origin string, minPrice f
 							"input": "$brands",
 							"as":    "b",
 							"in": bson.M{
-								"brandName": "$$b.brandName",
 								"items": bson.M{
 									"$filter": bson.M{
 										"input": "$$b.items",
@@ -59,18 +59,14 @@ func fetchExpensiveItems(catalog string, brand string, origin string, minPrice f
 							},
 						},
 					},
-					"as": "b",
-					"cond": bson.M{
-						"$and": []interface{}{
-							bson.M{"$eq": []interface{}{"$$b.brandName", brand}},
-							bson.M{"$gt": []interface{}{bson.M{"$size": "$$b.items"}, 0}}},
-					},
+					"as":   "b",
+					"cond": bson.M{"$gt": []interface{}{bson.M{"$size": "$$b.items"}, 0}},
 				},
 			},
 		},
 		}})
 
-	//perform the aggregation
+	//execute the aggregation query
 	var resp []bson.M
 	err = pipe.All(&resp)
 	if err != nil {
@@ -99,19 +95,8 @@ func fetchExpensiveItems(catalog string, brand string, origin string, minPrice f
 	return itemsFound, err
 }
 
-type Catalog struct {
-	ID          string  `bson:"_id" json:"_id"`
-	CatalogName string  `bson:"catalogName" json:"catalogName"`
-	Brands      []Brand `bson:"brands" json:"brands"`
-}
-
-type Brand struct {
-	BrandName string `bson:"brandName" json:"brandName"`
-	Items     []Item `bson:"items" json:"items"`
-}
-
 type Item struct {
 	Name   string  `bson:"name" json:"name"`
-	Origin string  `bson:"brandName" json:"origin"`
+	Origin string  `bson:"origin" json:"origin"`
 	Price  float64 `bson:"price" json:"price"`
 }
