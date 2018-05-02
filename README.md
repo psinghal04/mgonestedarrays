@@ -1,9 +1,10 @@
-#Overview
+
+# Overview #
 This example illustrates how to use an aggregation pipeline in MongoDB to fetch targeted data from deeply nested sub-arrays in collections. 
 The goal is to have MongoDB return only the data that is needed, and nothing more. With this technique, developers can avoid fetching large documents from the database,
 and then traverse them on the client side only to extract the data of interest, and discard the rest. 
 
-#Testing the Aggregation Query
+# Testing the Aggregation Query #
 **Note**: Make sure you are using MongoDB 3.6 or higher.
 1. Create a database called "subdoctest" in your local MongoDB instance. Within this database, create a collection called "catalog"
 2. Add the data from data.json into this collection.
@@ -87,14 +88,10 @@ The output of this query should be as follows:
 }
 ```
 
-###Testing the Golang Implementation
+# Testing the Golang Implementation #
 1. Ensure local MongoDB server is running, and has the database, collection and data set up from the previous steps.
 2. Execute "go get -d" to pull Go dependencies (such as mgo).
 3. Execute "go run nestedarrays.go". The program should produce the following output:
 ```
 Items matching criteria: [{Name:Olphia Origin:Italy Price:1200} {Name:Mormont Origin:Italy Price:1300} {Name:Racer Origin:Italy Price:600}]
 ```
-
-
-
-
